@@ -242,7 +242,7 @@ status_2022 <- status_count("2023-01-01")
 #a breakdown of active vs. obsolete funds as of Dec. 31, 2021
 status_2021 <- status_count("2022-01-01")
 #a breakdown of active vs. obsolete funds as of Dec. 31, 2020
-status_2019 <- status_count("2021-01-01")
+status_2020 <- status_count("2021-01-01")
 
 #a breakdown of active funds as of date
 status_summary <- function(x){
