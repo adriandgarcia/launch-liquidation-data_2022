@@ -303,7 +303,7 @@ comp_old_funds <- company_count(colz = c("Branding.Name.Mod", "Obsolete_Year", "
   filter(Oldest..Share.Class == "Yes")
 
 comp_rank <- function(x){
-  x %>%  filter(.[[2]] == "2021") %>% 
+  x %>%  filter(.[[2]] == "2022") %>% 
   mutate(Rank = rank(-Count)) %>% 
   filter(Rank <=20) %>%
     arrange(Rank)
