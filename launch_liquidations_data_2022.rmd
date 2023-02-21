@@ -278,6 +278,7 @@ company_change <- Full %>%
         grepl("Invesco", Branding.Name) ~ "PowerShares/Invesco",
         grepl("DWS$", Branding.Name) ~ "DWS/Xtrackers",
         grepl("Xtrackers", Branding.Name) ~ "DWS/Xtrackers",
+        grepl("Capital Group", Branding.Name) ~ "American Funds",
         TRUE ~ Branding.Name
       ))
     
@@ -409,6 +410,8 @@ company_change <- Full %>%
     top_new_launchers <- comp_rank(comp_new_funds)
     
 ```
+
+
 ```{r level, echo=FALSE}
 
 datatable(company_level_change)

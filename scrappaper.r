@@ -21,6 +21,14 @@ Macquarie <- Full %>%
        Obsolete_Year == 2022)
 
 Fidelity <- Full %>% 
+  filter(Branding.Name == "Fidelity") %>% 
+  group_by(Name.of..Fund.s..Oldest.Share.Class) %>% 
+  summarise(Min = min(Inception..Date),
+            Max = max(Inception_Year),
+            count = n()) %>% 
+  filter(Max == 2022)
+  
+  
   filter(Branding.Name == "Fidelity",
          Inception_Year == 2022) %>% 
   summarise(Name,
@@ -31,11 +39,7 @@ Fidelity <- Full %>%
 
 
 %>% 
-  group_by(Name.of..Fund.s..Oldest.Share.Class) %>% 
-  summarise(Min = min(Inception..Date),
-            Max = max(Inception_Year),
-            count = n()) %>% 
-  filter(Max == 2022)
+
 
 AC <- Full %>% 
   filter(Branding.Name == "American Century") %>% 
@@ -48,3 +52,7 @@ AC <- Full %>%
 AC2 <- Full %>% 
   filter(Branding.Name == "American Century",
          Inception_Year == 2022)
+
+Alive <- Full %>% 
+  filter(is.na(Obsolete_Year) |
+           Obsolete_Year == 2023)
