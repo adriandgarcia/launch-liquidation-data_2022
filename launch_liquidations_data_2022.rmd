@@ -1,5 +1,5 @@
 ---
-title: "launch_liquidations_data_2022"
+title: "index"
 author: "ADG"
 date: "`r Sys.Date()`"
 output:
@@ -28,7 +28,7 @@ Also added _Inception_Year_ and _Obsolete_Year_ because these variables are used
 Data filtered to remove:
 
 * "Load Waived" Share.Class.Type
-* Share classes launched and liquidated during the same calendar year
+* Share classes launched and liquidated during the same 18 month period
 * Share classes launched after 2022
 
 48,761 rows, 121 columns
@@ -60,11 +60,6 @@ Full <- read_csv("data_combined.csv",
     Inception_Year < 2023)
 
 ```
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
 # Overview
 
@@ -84,7 +79,6 @@ ggplot(data = Full, mapping = aes(x = year(Inception..Date), fill = Obsolete)) +
 
 There was a large drop off in launches in 2020 compared to recent years. However it appears rationalization continued at roughly the same levels as recent years.
 
-Of 48,520 fund share classes examined there are inception dates missing for 83.
 
 ```{r data_overview, echo = TRUE, message = FALSE}
 
@@ -268,53 +262,152 @@ To look at which firms cut or added share classes I first clean up the company n
 
 ```{r companies, echo = TRUE}
 
-company_change <- Full %>% 
+
+company_change <- Full %>%
   mutate(
     Branding.Name.Mod =
-    case_when(
-      grepl("State Street", Branding.Name) ~ "State Street",
-      grepl("TIAA", Branding.Name) ~ "TIAA/Nuveen",
-      grepl("Nuveen", Branding.Name) ~ "TIAA/Nuveen",
-      grepl("Eaton Vance", Branding.Name) ~ "Eaton Vance/Calvert",
-      grepl("Calvert", Branding.Name) ~ "Eaton Vance/Calvert",
-      grepl("iShares", Branding.Name) ~ "iShares/BlackRock",
-      grepl("BlackRock", Branding.Name) ~ "iShares/BlackRock",
-      grepl("PowerShares", Branding.Name) ~ "PowerShares/Invesco",
-      grepl("Invesco", Branding.Name) ~ "PowerShares/Invesco",
-      grepl("DWS$", Branding.Name) ~ "DWS/Xtrackers",
-      grepl("Xtrackers", Branding.Name) ~ "DWS/Xtrackers",
-      TRUE ~ Branding.Name))
-
-company_count <- function(x, colz){
-  company_change %>% 
-    group_by_at(colz) %>% 
-    summarise(Count = n()) %>% 
-    ungroup() %>% 
-    arrange(desc(.[[2]]))
-   }
-
-comp_inception <- company_count(colz = c("Branding.Name.Mod", "Inception_Year"))
-comp_obsolete <- company_count(colz = c("Branding.Name.Mod", "Obsolete_Year"))
-
-comp_new_funds <- company_count(colz = c("Branding.Name.Mod", "Inception_Year", "Oldest..Share.Class")) %>% 
-  filter(Oldest..Share.Class == "Yes")
-
-comp_old_funds <- company_count(colz = c("Branding.Name.Mod", "Obsolete_Year", "Oldest..Share.Class")) %>% 
-  filter(Oldest..Share.Class == "Yes")
-
-comp_rank <- function(x){
-  x %>%  filter(.[[2]] == "2022") %>% 
-  mutate(Rank = rank(-Count)) %>% 
-  filter(Rank <=20) %>%
-    arrange(Rank)
-}
-
-top_cutters <- comp_rank(comp_obsolete)
-top_old_cutters <-  comp_rank(comp_old_funds)
-
-top_launchers <- comp_rank(comp_inception)
-top_new_launchers <- comp_rank(comp_new_funds)
-
+      case_when(
+        grepl("State Street", Branding.Name) ~ "State Street",
+        grepl("TIAA", Branding.Name) ~ "TIAA/Nuveen",
+        grepl("Nuveen", Branding.Name) ~ "Morgan Stanley",
+        grepl("Eaton Vance", Branding.Name) ~ "Morgan Stanley",
+        grepl("Calvert", Branding.Name) ~ "Eaton Vance/Calvert",
+        grepl("iShares", Branding.Name) ~ "iShares/BlackRock",
+        grepl("BlackRock", Branding.Name) ~ "iShares/BlackRock",
+        grepl("PowerShares", Branding.Name) ~ "PowerShares/Invesco",
+        grepl("Invesco", Branding.Name) ~ "PowerShares/Invesco",
+        grepl("DWS$", Branding.Name) ~ "DWS/Xtrackers",
+        grepl("Xtrackers", Branding.Name) ~ "DWS/Xtrackers",
+        TRUE ~ Branding.Name
+      ))
+    
+    
+    company_funds <- company_change %>%
+      group_by(FundId) %>%
+      mutate(
+        Newest_ObDate = max(Obsolete_Year),
+        Oldest_InDate = min(Inception_Year)
+      ) %>%
+      group_by(Branding.Name.Mod,
+               FundId,
+               Newest_ObDate,
+               Oldest_InDate) %>%
+      summarise() %>%
+      mutate(
+        Count_2022 =
+          case_when(
+            is.na(Newest_ObDate) ~ 1,
+            Newest_ObDate == 2023 ~ 1,
+            Newest_ObDate <= 2022 ~ 0
+          ),
+        Count_2018 =
+          case_when(
+            is.na(Newest_ObDate) & Oldest_InDate <= 2018 ~ 1,
+            Oldest_InDate > 2018 | Newest_ObDate <= 2018 ~ 0,
+            Newest_ObDate > 2018 ~ 1
+          )
+      )
+    
+    company_fund_change <- company_funds %>%
+      group_by(Branding.Name.Mod) %>%
+      summarise(
+        Total_2018 = sum(Count_2018, na.rm = T),
+        Total_2022 = sum(Count_2022, na.rm = T),
+        Difference = sum(Total_2022,-Total_2018, na.rm = T)
+      )
+    
+    company_level <- company_change %>%
+      ungroup() %>%
+      mutate(
+        Count_2018 =
+          case_when(
+            Obsolete..Date > "2018-12-31" ~ "obsolete_after_18",
+            Obsolete..Date <= "2018-12-31" ~ "obsolete_in_18",
+            is.na(Obsolete..Date) &
+              Inception..Date <= "2018-12-31" ~ "exists_in_18",
+            Inception..Date > "2018-12-31" ~ "exists_after_18",
+            TRUE ~ "Other"
+          ),
+        Count_2022 =
+          case_when(
+            Obsolete..Date > "2022-12-31" ~ "obsolete_after_22",
+            Obsolete..Date <= "2022-12-31" ~ "obsolete_in_22",
+            is.na(Obsolete..Date) &
+              Inception..Date <= "2022-12-31" ~ "exists_in_22",
+            Inception..Date > "2022-12-31" ~ "exists_after_22",
+            TRUE ~ "Other"
+          )
+      )
+    
+    company_level_2018 <- company_level %>%
+      summarise(Branding.Name.Mod,
+                Name,
+                FundId,
+                Count_2018,
+                Count_2022) %>%
+      group_by(Branding.Name.Mod, FundId, Count_2018) %>%
+      summarise(Tally_2018 = n()) %>%
+      pivot_wider(names_from = Count_2018,
+                  values_from = Tally_2018) %>%
+      mutate(Total_2018 = sum(exists_in_18, obsolete_after_18, na.rm = T))
+    
+    company_level_2022 <- company_level %>%
+      summarise(Branding.Name.Mod,
+                Name,
+                FundId,
+                Count_2018,
+                Count_2022) %>%
+      group_by(Branding.Name.Mod, FundId, Count_2022) %>%
+      summarise(Tally_2022 = n()) %>%
+      pivot_wider(names_from = Count_2022,
+                  values_from = Tally_2022) %>%
+      mutate(Total_2022 = sum(exists_in_22, obsolete_after_22, na.rm = T))
+    
+    company_level_change <-
+      full_join(company_level_2018, company_level_2022)
+    
+    company_level_change <- company_level_change %>%
+      group_by(Branding.Name.Mod) %>%
+      summarise(Change = sum(Total_2022,-Total_2018, na.rm = T))
+    
+    company_count <- function(x, colz) {
+      company_change %>%
+        group_by_at(colz) %>%
+        summarise(Count = n()) %>%
+        ungroup() %>%
+        arrange(desc(.[[2]]))
+    }
+    
+    comp_inception <-
+      company_count(colz = c("Branding.Name.Mod", "Inception_Year"))
+    comp_obsolete <-
+      company_count(colz = c("Branding.Name.Mod", "Obsolete_Year"))
+    
+    comp_new_funds <-
+      company_count(
+        colz = c("Branding.Name.Mod", "Inception_Year", "Oldest..Share.Class")
+      ) %>%
+      filter(Oldest..Share.Class == "Yes")
+    
+    comp_old_funds <-
+      company_count(
+        colz = c("Branding.Name.Mod", "Obsolete_Year", "Oldest..Share.Class")
+      ) %>%
+      filter(Oldest..Share.Class == "Yes")
+    
+    comp_rank <- function(x) {
+      x %>%  filter(.[[2]] == "2022") %>%
+        mutate(Rank = rank(-Count)) %>%
+        filter(Rank <= 20) %>%
+        arrange(Rank)
+    }
+    
+    top_cutters <- comp_rank(comp_obsolete)
+    top_old_cutters <-  comp_rank(comp_old_funds)
+    
+    top_launchers <- comp_rank(comp_inception)
+    top_new_launchers <- comp_rank(comp_new_funds)
+    
 ```
 
 ## Top Launchers
