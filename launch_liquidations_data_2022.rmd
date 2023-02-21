@@ -409,6 +409,11 @@ company_change <- Full %>%
     top_new_launchers <- comp_rank(comp_new_funds)
     
 ```
+```{r level, echo=FALSE}
+
+datatable(company_level_change)
+
+```
 
 ## Top Launchers
 
