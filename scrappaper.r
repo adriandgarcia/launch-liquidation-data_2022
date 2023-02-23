@@ -38,7 +38,7 @@ Fidelity <- Full %>%
             Oldest..Share.Class)
 
 
-%>% 
+
 
 
 AC <- Full %>% 
@@ -56,3 +56,16 @@ AC2 <- Full %>%
 Alive <- Full %>% 
   filter(is.na(Obsolete_Year) |
            Obsolete_Year == 2023)
+
+fidelity <- company_funds %>% 
+  filter(Branding.Name.Mod == "Fidelity",
+         Count_2022 != Count_2018) %>%
+  ungroup %>%
+  mutate(Difference = sum(Count_2022,-Count_2018, na.rm = T))
+
+fidelity2 <- company_level_change %>% 
+  filter(Branding.Name.Mod == "Fidelity",
+         !identical(Exists_2018, Exists_2022)) %>%
+  ungroup %>%
+  mutate(Difference = sum(Exists_2022,-Exists_2018, na.rm = T))
+

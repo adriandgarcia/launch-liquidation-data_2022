@@ -283,14 +283,71 @@ company_change <- Full %>%
       ))
     
     
+
+    
+    company_level_2018 <- company_change %>%
+      filter(Inception_Year <= 2018) %>% 
+      mutate(
+        Count_2018 =
+          case_when(
+            is.na(Obsolete_Year) ~ "Exists_2018",
+            Obsolete_Year <= 2018 ~ "Obsolete_2018",
+            Obsolete_Year > 2018 ~ "Exists_2018",
+            TRUE ~ "Other"
+      ))
+    
+    company_level_2018 <- company_level_2018 %>%
+      select(Branding.Name.Mod,
+                Name,
+                FundId,
+                Count_2018) %>%
+      group_by(Branding.Name.Mod, Name, Count_2018) %>%
+      summarise(Tally_2018 = n()) %>%
+      pivot_wider(names_from = Count_2018,
+                  values_from = Tally_2018)
+    
+
+      
+
+      company_level_2022 <- company_change %>%
+      filter(Inception_Year <= 2022) %>% 
+      mutate(
+        Count_2022 =
+          case_when(
+            is.na(Obsolete_Year) ~ "Exists_2022",
+            Obsolete_Year <= 2022 ~ "Obsolete_2022",
+            Obsolete_Year > 2022 ~ "Exists_2022",
+            TRUE ~ "Other"
+      ))
+    
+    company_level_2022 <- company_level_2022 %>%
+      select(Branding.Name.Mod,
+                Name,
+                FundId,
+                Count_2022) %>%
+      group_by(Branding.Name.Mod, Name, Count_2022) %>%
+      summarise(Tally_2022 = n()) %>%
+      pivot_wider(names_from = Count_2022,
+                  values_from = Tally_2022)
+    
+    company_level_change <-
+      full_join(company_level_2018, company_level_2022)
+    
+    company_level_change <- company_level_change %>%
+      group_by(Branding.Name.Mod) %>%
+      summarise(Exists_2022 = sum(Exists_2022, na.rm = T),
+                Exists_2018 = sum(Exists_2018, na.rm = T),
+                Change = sum(Exists_2022,-Exists_2018, na.rm = T))
+    
+    
     company_funds <- company_change %>%
-      group_by(FundId) %>%
+      group_by(Name.of..Fund.s..Oldest.Share.Class) %>%
       mutate(
         Newest_ObDate = max(Obsolete_Year),
         Oldest_InDate = min(Inception_Year)
       ) %>%
       group_by(Branding.Name.Mod,
-               FundId,
+               Name.of..Fund.s..Oldest.Share.Class,
                Newest_ObDate,
                Oldest_InDate) %>%
       summarise() %>%
@@ -309,6 +366,7 @@ company_change <- Full %>%
           )
       )
     
+        
     company_fund_change <- company_funds %>%
       group_by(Branding.Name.Mod) %>%
       summarise(
@@ -316,60 +374,6 @@ company_change <- Full %>%
         Total_2022 = sum(Count_2022, na.rm = T),
         Difference = sum(Total_2022,-Total_2018, na.rm = T)
       )
-    
-    company_level <- company_change %>%
-      ungroup() %>%
-      mutate(
-        Count_2018 =
-          case_when(
-            Obsolete..Date > "2018-12-31" ~ "obsolete_after_18",
-            Obsolete..Date <= "2018-12-31" ~ "obsolete_in_18",
-            is.na(Obsolete..Date) &
-              Inception..Date <= "2018-12-31" ~ "exists_in_18",
-            Inception..Date > "2018-12-31" ~ "exists_after_18",
-            TRUE ~ "Other"
-          ),
-        Count_2022 =
-          case_when(
-            Obsolete..Date > "2022-12-31" ~ "obsolete_after_22",
-            Obsolete..Date <= "2022-12-31" ~ "obsolete_in_22",
-            is.na(Obsolete..Date) &
-              Inception..Date <= "2022-12-31" ~ "exists_in_22",
-            Inception..Date > "2022-12-31" ~ "exists_after_22",
-            TRUE ~ "Other"
-          )
-      )
-    
-    company_level_2018 <- company_level %>%
-      summarise(Branding.Name.Mod,
-                Name,
-                FundId,
-                Count_2018,
-                Count_2022) %>%
-      group_by(Branding.Name.Mod, FundId, Count_2018) %>%
-      summarise(Tally_2018 = n()) %>%
-      pivot_wider(names_from = Count_2018,
-                  values_from = Tally_2018) %>%
-      mutate(Total_2018 = sum(exists_in_18, obsolete_after_18, na.rm = T))
-    
-    company_level_2022 <- company_level %>%
-      summarise(Branding.Name.Mod,
-                Name,
-                FundId,
-                Count_2018,
-                Count_2022) %>%
-      group_by(Branding.Name.Mod, FundId, Count_2022) %>%
-      summarise(Tally_2022 = n()) %>%
-      pivot_wider(names_from = Count_2022,
-                  values_from = Tally_2022) %>%
-      mutate(Total_2022 = sum(exists_in_22, obsolete_after_22, na.rm = T))
-    
-    company_level_change <-
-      full_join(company_level_2018, company_level_2022)
-    
-    company_level_change <- company_level_change %>%
-      group_by(Branding.Name.Mod) %>%
-      summarise(Change = sum(Total_2022,-Total_2018, na.rm = T))
     
     company_count <- function(x, colz) {
       company_change %>%
